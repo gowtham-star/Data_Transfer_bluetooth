@@ -1,6 +1,9 @@
 # data_transfer_bluetooth
 
-A app to transfer data from pi to device
+A app to transfer data from pi to device using bluetooth
+
+1. A flutter app to to track real time data from pi
+2. A python script to act as server to send real time data using bluetooth
 
 ## Getting Started
 
