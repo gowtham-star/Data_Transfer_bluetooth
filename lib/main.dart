@@ -24,7 +24,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
   void _connectToRaspberryPi() async {
     // Start scanning for nearby Bluetooth devices
     flutterBlue.scan().listen((scanResult) {
-      if (scanResult.device.name == 'Your Raspberry Pi Name') {
+      if (scanResult.device.name == 'raspberrypi') {
         // Found the Raspberry Pi, stop scanning
         flutterBlue.stopScan();
         setState(() {
