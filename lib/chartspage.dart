@@ -20,7 +20,13 @@ class ChartsPage extends StatelessWidget {
             children: [
               Text("Temperature Chart", style: TextStyle(fontSize: 16)),
               SfCartesianChart(
-                primaryXAxis: DateTimeAxis(),
+                primaryXAxis: DateTimeAxis(title: AxisTitle(
+                    text: 'Time'
+                )),primaryYAxis: NumericAxis(
+                  title: AxisTitle(
+                      text: 'Temperature'
+                  )
+              ),
                 series: <ChartSeries<PiDataModel, DateTime>>[
                   LineSeries<PiDataModel, DateTime>(
                     dataSource: databaseData,
@@ -33,7 +39,10 @@ class ChartsPage extends StatelessWidget {
               ),
               Text("Random Chart", style: TextStyle(fontSize: 16)),
               SfCartesianChart(
-                primaryXAxis: DateTimeAxis(),
+                primaryXAxis: DateTimeAxis(title: AxisTitle(
+                    text: 'Time'
+                )),
+                primaryYAxis: NumericAxis(title: AxisTitle(text: "Random")),
                 series: <ChartSeries<PiDataModel, DateTime>>[
                   LineSeries<PiDataModel, DateTime>(
                     dataSource: databaseData,
