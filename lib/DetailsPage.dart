@@ -22,6 +22,7 @@ class _DetailPageState extends State<DetailPage> {
 
   BluetoothConnection? connection ;
   bool isConnecting = true;
+  bool sync = false;
   bool get isConnected => (connection?.isConnected ?? false);
   bool isDisconnecting = false;
   String receivedData = "No Data";
@@ -37,7 +38,7 @@ class _DetailPageState extends State<DetailPage> {
         isConnecting = false;
         isDisconnecting = false;
       });
-
+      _sendMessage("nosync");
       connection!.input!.listen(_onDataReceived).onDone(() {
         if (isDisconnecting) {
           print('Disconnecting locally!');
@@ -62,6 +63,22 @@ class _DetailPageState extends State<DetailPage> {
       connection = null;
     }
     super.dispose();
+  }
+
+  void _sendMessage(String text) async {
+    if (text.length > 0) {
+      try {
+        connection!.output.add(Uint8List.fromList(utf8.encode(text + "\r\n")));
+        await connection!.output.allSent;
+
+        setState(() {
+
+        });
+      } catch (e) {
+        // Ignore error, but notify state
+        setState(() {});
+      }
+    }
   }
 
   Future<void> downloadCsv() async {
@@ -121,7 +138,7 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  Future<void> _onDataReceived(Uint8List data) async{
+  Future<void> _onDataReceived(Uint8List data) async {
     // Allocate buffer for parsed data
     int backspacesCounter = 0;
     data.forEach((byte) {
@@ -152,20 +169,36 @@ class _DetailPageState extends State<DetailPage> {
     });
     final jsonData = json.decode(dataString);
     //Storing data in database
-    final dbHelper =  PiDatabase.instance;
-    // Make changes based attribute names here
-    var dataObj =  PiDataModel(
-      timeStamp: jsonData["timeStamp"],
-      temperature: jsonData["temperature"],
-      random: jsonData["random"],
-    );
-    dbHelper.insertdata(dataObj);
+    final dbHelper = PiDatabase.instance;
+    if (jsonData is List) {
+      // Convert JSON array data to a list of PiDataModel objects manually
+      final List<PiDataModel> piDataModels = [];
+      for (var jsonDataPoint in jsonData) {
+        PiDataModel dataModel = PiDataModel(
+          timeStamp: jsonDataPoint['timeStamp'],
+          temperature: jsonDataPoint['temperature'],
+          random: jsonDataPoint['random'],
+        );
+        piDataModels.add(dataModel);
+      }
+      // Insert the list of PiDataModel objects into the database
+      await PiDatabase.instance.insertMultipleData(piDataModels);
+    }
+    else{
+      // Make changes based attribute names here
+      var dataObj = PiDataModel(
+        timeStamp: jsonData["timeStamp"],
+        temperature: jsonData["temperature"],
+        random: jsonData["random"],
+      );
+      dbHelper.insertdata(dataObj);
+    }
+
     //Display data from database
     final result = await dbHelper.getdata();
     setState(() {
       databaseData = result;
     });
-
   }
   @override
   Widget build(BuildContext context) {
@@ -199,6 +232,16 @@ class _DetailPageState extends State<DetailPage> {
               padding: EdgeInsets.symmetric(horizontal: 20), // Add margin left and right
               child: Column(
                 children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      _sendMessage("sync");
+                    },
+                    child: Text('Sync All Data'),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.all(16), // Adjust button padding
+                    ),
+                  ),
+                  SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () {
                       downloadCsv();

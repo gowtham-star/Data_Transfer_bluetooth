@@ -35,6 +35,19 @@ class PiDataModel {
       random: map['random'],
     );
   }
+
+  // Convert a list of models into a list of Maps.
+  static List<Map<String, dynamic>> listToMaps(List<PiDataModel> models) {
+    return models.map((model) => model.toMap()).toList();
+  }
+
+  // Factory method to create a list of models from a list of Maps.
+  static List<PiDataModel> listFromMaps(List<Map<String, dynamic>> maps) {
+    return List.generate(maps.length, (i) {
+      return PiDataModel.fromMap(maps[i]);
+    });
+  }
+
   @override
   String toString() {
     return 'PiDataModel{timeStamp: $timeStamp, temparature: $temperature, random: $random}';
@@ -75,6 +88,20 @@ class PiDatabase {
     final db = await database;
     return await db.insert('pi_bluetooth_data_table', piDataModel.toMap(),conflictAlgorithm: ConflictAlgorithm.replace);
   }
+
+  // Insert multiple PiDataModel objects into the database.
+  Future<void> insertMultipleData(List<PiDataModel> piDataModels) async {
+    final db = await database;
+    final batch = db.batch();
+
+    for (final piDataModel in piDataModels) {
+      batch.insert('pi_data_table', piDataModel.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    await batch.commit(noResult: true);
+  }
+
 
   Future<List<PiDataModel>> getdata() async {
     final db = await database;
