@@ -8,6 +8,18 @@ import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'dart:async';
+
+class DataFetcher {
+  void fetchData() {
+    // Your data fetching logic here
+    print('Fetching data...');
+  }
+}
+
+
+
 
 class DetailPage extends StatefulWidget {
 
@@ -28,6 +40,9 @@ class _DetailPageState extends State<DetailPage> {
   String receivedData = "No Data";
   List<PiDataModel>  databaseData= [];
 
+  late Timer dataTimer;
+  Duration refreshRate = const Duration(seconds: 1);
+
   @override
   initState(){
     super.initState();
@@ -38,7 +53,7 @@ class _DetailPageState extends State<DetailPage> {
         isConnecting = false;
         isDisconnecting = false;
       });
-      _sendMessage("nosync");
+      startDataFetching();
       connection!.input!.listen(_onDataReceived).onDone(() {
         if (isDisconnecting) {
           print('Disconnecting locally!');
@@ -65,15 +80,33 @@ class _DetailPageState extends State<DetailPage> {
     super.dispose();
   }
 
+
+  void startDataFetching() {
+    _sendMessage("nosync");
+    dataTimer = Timer.periodic(refreshRate, (Timer t) {
+      _sendMessage("nosync"); // Fetch data periodically
+    });
+  }
+
+  void pauseDataFetching() {
+    if (dataTimer.isActive) {
+      dataTimer.cancel();
+    }
+  }
+
+  void resumeDataFetching() {
+    if (!dataTimer.isActive) {
+      dataTimer = Timer.periodic(refreshRate, (Timer t) {
+        _sendMessage("nosync"); // Resume periodic data fetching
+      });
+    }
+  }
+
   void _sendMessage(String text) async {
     if (text.length > 0) {
       try {
-        connection!.output.add(Uint8List.fromList(utf8.encode(text + "\r\n")));
+        connection!.output.add(Uint8List.fromList(utf8.encode(text)));
         await connection!.output.allSent;
-
-        setState(() {
-
-        });
       } catch (e) {
         // Ignore error, but notify state
         setState(() {});
@@ -139,67 +172,51 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> _onDataReceived(Uint8List data) async {
-    // Allocate buffer for parsed data
-    int backspacesCounter = 0;
-    data.forEach((byte) {
-      if (byte == 8 || byte == 127) {
-        backspacesCounter++;
-      }
-    });
-    Uint8List buffer = Uint8List(data.length - backspacesCounter);
-    int bufferIndex = buffer.length;
-
-    // Apply backspace control character
-    backspacesCounter = 0;
-    for (int i = data.length - 1; i >= 0; i--) {
-      if (data[i] == 8 || data[i] == 127) {
-        backspacesCounter++;
-      } else {
-        if (backspacesCounter > 0) {
-          backspacesCounter--;
-        } else {
-          buffer[--bufferIndex] = data[i];
-        }
-      }
-    }
-
-    String dataString = String.fromCharCodes(buffer);
+    String dataString = ascii.decode(data);
     setState(() {
       receivedData = dataString;
     });
-    final jsonData = json.decode(dataString);
-    //Storing data in database
-    final dbHelper = PiDatabase.instance;
-    if (jsonData is List) {
-      // Convert JSON array data to a list of PiDataModel objects manually
-      final List<PiDataModel> piDataModels = [];
-      for (var jsonDataPoint in jsonData) {
-        PiDataModel dataModel = PiDataModel(
-          timeStamp: jsonDataPoint['timeStamp'],
-          temperature: jsonDataPoint['temperature'],
-          random: jsonDataPoint['random'],
-        );
-        piDataModels.add(dataModel);
-      }
-      // Insert the list of PiDataModel objects into the database
-      await PiDatabase.instance.insertMultipleData(piDataModels);
-    }
-    else{
-      // Make changes based attribute names here
-      var dataObj = PiDataModel(
-        timeStamp: jsonData["timeStamp"],
-        temperature: jsonData["temperature"],
-        random: jsonData["random"],
-      );
-      dbHelper.insertdata(dataObj);
-    }
 
-    //Display data from database
-    final result = await dbHelper.getdata();
-    setState(() {
-      databaseData = result;
-    });
+    if(dataString.length == 9){
+      resumeDataFetching();
+      setState(() {
+        receivedData = "Started Fetching New Data";
+      });
+    }
+    else {
+      final jsonData = json.decode(dataString);
+      final dbHelper = PiDatabase.instance;
+
+      if (jsonData is List) {
+        final List<PiDataModel> piDataModels = [];
+        for (var jsonDataPoint in jsonData) {
+          PiDataModel dataModel = PiDataModel(
+            timeStamp: jsonDataPoint['timeStamp'],
+            temperature: jsonDataPoint['temperature'],
+            random: jsonDataPoint['random'],
+          );
+          piDataModels.add(dataModel);
+        }
+        await dbHelper.insertMultipleData(piDataModels);
+
+      }
+      else {
+        setState(() {
+          receivedData = dataString;
+        });
+
+        var dataObj = PiDataModel(
+          timeStamp: jsonData["timeStamp"],
+          temperature: jsonData["temperature"],
+          random: jsonData["random"],
+        );
+
+        await dbHelper.insertdata(dataObj);
+      }
+    }
   }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,81 +229,93 @@ class _DetailPageState extends State<DetailPage> {
               : 'Disconnected from ${widget.server.name}',
         ),
       ),
-      body: SafeArea(
-        child: isConnected
-            ? Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'Real-time Data',
-              style: TextStyle(fontSize: 24),
-            ),
-            SizedBox(height: 20),
-            Text(
-              receivedData,
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20), // Add margin left and right
-              child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      _sendMessage("sync");
-                    },
-                    child: Text('Sync All Data'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.all(16), // Adjust button padding
-                    ),
+      body: Center(
+        child: Scrollbar( // Wrap your ListView with Scrollbar
+          child: ListView(
+            padding: EdgeInsets.all(16.0),
+            children: [SafeArea(
+              child: isConnected
+                  ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    'Real-time Data',
+                    style: TextStyle(fontSize: 24),
                   ),
-                  SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      downloadCsv();
-                    },
-                    child: Text('Download CSV'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.all(16), // Adjust button padding
-                    ),
+                  SizedBox(height: 20),
+                  Text(
+                    receivedData,
+                    style: TextStyle(fontSize: 16),
                   ),
-                  SizedBox(height: 10), // Add spacing between buttons
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ChartsPage(databaseData: databaseData),
+                  SizedBox(height: 20),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 20), // Add margin left and right
+                    child: Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            pauseDataFetching();
+                            _sendMessage("sync");
+                          },
+                          child: Text('Sync All Data'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.all(16), // Adjust button padding
+                          ),
                         ),
-                      );
-                    },
-                    child: Text('View Charts'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.all(16), // Adjust button padding
+                        SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            downloadCsv();
+                          },
+                          child: Text('Download CSV'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.all(16), // Adjust button padding
+                          ),
+                        ),
+                        SizedBox(height: 10), // Add spacing between buttons
+                        ElevatedButton(
+                          onPressed: () async {
+                            // Call getdata() to retrieve data from the database
+                            final List<PiDataModel> databaseDatas = await PiDatabase.instance.getdata();
+
+                            // Navigate to ChartsPage and pass the retrieved data
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChartsPage(databaseData: databaseDatas),
+                              ),
+                            );
+                          },
+                          child: Text('View Charts'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.all(16),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        )
-            : Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                "Connecting ....",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              )
+                  : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Connecting ....",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    CircularProgressIndicator(),
+                  ],
                 ),
               ),
-              SizedBox(height: 20),
-              CircularProgressIndicator(),
+            )
             ],
           ),
         ),
@@ -296,3 +325,6 @@ class _DetailPageState extends State<DetailPage> {
 
 
 }
+
+
+

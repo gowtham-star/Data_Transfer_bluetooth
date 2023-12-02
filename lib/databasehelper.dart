@@ -95,7 +95,7 @@ class PiDatabase {
     final batch = db.batch();
 
     for (final piDataModel in piDataModels) {
-      batch.insert('pi_data_table', piDataModel.toMap(),
+      batch.insert('pi_bluetooth_data_table', piDataModel.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
