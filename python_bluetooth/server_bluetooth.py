@@ -83,7 +83,8 @@ def Main(file_name):
              if str(received_data) == "nosync":
                client_sock.send(read_latest_data(file_name))
              elif(str(received_data) == "sync"):
-                client_sock.send(read_all_data(file_name))
+                for jsonPacket in read_all_data(file_name):
+                    client_sock.send(jsonPacket)
              time.sleep(1)
        except IOError:
           pass
