@@ -36,7 +36,7 @@ def read_10_data_per_message(file_name):
             data_list = []
 
             # Processing batches of 10 lines
-            for i in range(0, len(lines), 10):
+            for i in range(1, len(lines), 10):
                 data_batch = lines[i:i+10]
                 data_batch_json = []
 
@@ -80,11 +80,13 @@ def Main(file_name):
        try:
           while True:
              received_data = client_sock.recv(1024)  # Receiving data from the client
+             received_data = str(received_data)[2:-1]
              if str(received_data) == "nosync":
                client_sock.send(read_latest_data(file_name))
              elif(str(received_data) == "sync"):
                 for jsonPacket in read_all_data(file_name):
                     client_sock.send(jsonPacket)
+                client_sock.send("sync_done")
              time.sleep(1)
        except IOError:
           pass
