@@ -28,28 +28,42 @@ def read_latest_data(file_name):
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
-def read_all_data(file_name):
+def read_10_data_per_message(file_name):
     try:
         with open(file_name, 'r') as file:
-            # Read all lines from the file
             lines = file.readlines()
-
-            # Extract headers from the first line
             headers = lines[0].strip().split(',')
-
-            # Initialize an empty list to store JSON objects
             data_list = []
 
-            # Iterate through lines starting from the second line
-            for line in lines[1:]:
-                data_values = line.strip().split(',')
-                # Create a JSON object with headers and values
-                data_json = {headers[i]: int(data_values[i]) for i in range(len(headers))}
-                data_list.append(data_json)
+            # Processing batches of 10 lines
+            for i in range(0, len(lines), 10):
+                data_batch = lines[i:i+10]
+                data_batch_json = []
 
-            return json.dumps(data_list, indent=2)
+                for line in data_batch:
+                    data_values = line.strip().split(',')
+                    data_json = {headers[j]: int(data_values[j]) for j in range(len(headers))}
+                    data_batch_json.append(data_json)
+
+                data_list.append(data_batch_json)
+
+            # Handling remaining lines (less than 10)
+            if len(lines) % 10 != 0:
+                remaining_lines = lines[len(lines) - len(lines) % 10:]
+                remaining_data_json = []
+
+                for line in remaining_lines:
+                    data_values = line.strip().split(',')
+                    data_json = {headers[j]: int(data_values[j]) for j in range(len(headers))}
+                    remaining_data_json.append(data_json)
+
+                data_list.append(remaining_data_json)
+
+            json_messages = [json.dumps(data, indent=2) for data in data_list]
+            return json_messages
     except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return [json.dumps({"error": str(e)}, indent=2)]
+
 
 
 def Main(file_name):
