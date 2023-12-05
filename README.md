@@ -19,11 +19,16 @@ Getting up and running with our application is a breeze. Here's how to use it:
 1. **Raspberry Pi Setup**:
    - Download this repository on your Raspberry Pi.
    - Copy the `python_bluetooth` folder to your desktop.
+   - Open the terminal on your Raspberry Pi and navigate to the `python_bluetooth` directory. (This script genrates data. You can replace this with your own script and it by default generates data.csv file)
+   ```
+     source venv/bin/activate
+     python DataGenerator.py
+   ```
    - Open the terminal on your Raspberry Pi and navigate to the `python_bluetooth` directory.
    - Run the following command to start the Flask server:
      ```
      source venv/bin/activate
-     python server_bluetooth.py
+     python server_bluetooth.py <data.csv or replace with your own csv file>
      ```
    - Bluetooth server runs using RFCOMM channel 0
 
@@ -40,6 +45,7 @@ Getting up and running with our application is a breeze. Here's how to use it:
    - Start seeing real-time data on the home screen.
    - Dive deeper by exploring interactive charts via the "View Charts" button.
    - Download data in CSV format using the "Download CSV" button.
+   - Click on sync data button to sync historical data
 
 Enjoy seamless data transfer and exploration!
 
@@ -47,7 +53,7 @@ Enjoy seamless data transfer and exploration!
 
 ## Adding New Attributes
 
-We've made it easy to expand the capabilities of our application. Here's how to add new attributes:
+Here's how to add new attributes:
 
 1. **Modify `ExposeAPI.py` on the Raspberry Pi**:
    - Update the script by adding new key-value attributes within the JSON structure section.
