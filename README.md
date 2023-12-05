@@ -24,7 +24,7 @@ Getting up and running with our application is a breeze. Here's how to use it:
      source venv/bin/activate
      python DataGenerator.py
    ```
-   - Open the terminal on your Raspberry Pi and navigate to the `python_bluetooth` directory.
+   - Open a new terminal on your Raspberry Pi and navigate to the `python_bluetooth` directory.
    - Run the following command to start the Flask server:
      ```
      source venv/bin/activate
