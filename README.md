@@ -1,6 +1,10 @@
 # Data Transfer using Wi-Fi Flutter Application
 
-![App Preview](app_preview.png)
+## DEMO
+
+https://github.com/gowtham-star/Data_Transfer_bluetooth/assets/29543544/3c5b010e-d6a8-4941-8154-b40791a5dd97
+
+
 
 ## Introduction
 
@@ -46,11 +50,7 @@ Getting up and running with our application is a breeze. Here's how to use it:
    - Dive deeper by exploring interactive charts via the "View Charts" button.
    - Download data in CSV format using the "Download CSV" button.
    - Click on sync data button to sync historical data
-
-Enjoy seamless data transfer and exploration!
-
-![Data Visualization](chart_preview.png)
-
+     
 ## Adding New Attributes
 
 Here's how to add new attributes:
@@ -67,8 +67,6 @@ Here's how to add new attributes:
      - Add a new key-value pair in the `dataObj` variable to handle the new attribute.
 
    - In `chartspage.dart`, adapt the chart code to display the new attribute on the Y-axis.
-
-![Data Exploration](data_explore.png)
 
 Please note that both the Raspberry Pi and the mobile app should be connected via Bluetooth channel 0
 
